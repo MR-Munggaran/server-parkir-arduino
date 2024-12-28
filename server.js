@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql');
+const mysql = require('mysql2'); // Change from 'mysql' to 'mysql2'
 const os = require('os');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -21,7 +21,7 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Set up koneksi ke MySQL
+// Set up connection to MySQL using mysql2
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -30,12 +30,13 @@ const db = mysql.createConnection({
   port: process.env.DB_PORT,
 });
 
+// Using promise-based API of mysql2
 db.connect((err) => {
   if (err) throw err;
   console.log('Connected to MySQL');
 });
 
-// Emit data ke semua klien
+// Emit data to all clients
 function emitParkingData() {
   const query = 'SELECT * FROM parkir_records ORDER BY time_in DESC';
   db.query(query, (err, results) => {
@@ -47,7 +48,7 @@ function emitParkingData() {
   });
 }
 
-// Route untuk menerima UID dan menyimpannya ke database
+// Route to receive UID and store it in the database
 app.post('/enter', (req, res) => {
   const uid = req.body.uid;
   const query = 'INSERT INTO parkir_records (uid) VALUES (?)';
@@ -63,7 +64,7 @@ app.post('/enter', (req, res) => {
   });
 });
 
-// Route untuk menghandle waktu keluar dan menghitung biaya
+// Route to handle exit time and calculate fees
 app.post('/exit', (req, res) => {
   const uid = req.body.uid;
   const queryCheck = 'SELECT * FROM parkir_records WHERE uid = ? AND time_out IS NULL ORDER BY time_in DESC LIMIT 1';
@@ -113,7 +114,7 @@ app.post('/exit', (req, res) => {
   });
 });
 
-// Route untuk mendapatkan data parkir
+// Route to get parking records
 app.get('/records', (req, res) => {
   const query = 'SELECT * FROM parkir_records ORDER BY time_in DESC';
   db.query(query, (err, results) => {
@@ -137,7 +138,6 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-
 server.listen(port, () => {
   const networkInterfaces = os.networkInterfaces();
   const ipAddresses = Object.values(networkInterfaces)
